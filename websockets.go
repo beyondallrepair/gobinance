@@ -53,31 +53,31 @@ type TradeEvent struct {
 // UnmarshalJSON provides custom unmarshalling for TradeEvents.
 func (t *TradeEvent) UnmarshalJSON(bs []byte) error {
 	var tmp struct {
-		Event         string `json:"e"`
-		Time          int64  `json:"E"`
-		Symbol        string `json:"s"`
-		TradeID       int64  `json:"t"`
-		Price         string `json:"p"`
-		Quantity      string `json:"q"`
-		BuyerOrderID  int64  `json:"b"`
-		SellerOrderID int64  `json:"a"`
-		TradeTime     int64  `json:"T"`
-		IsBuyerMaker  bool   `json:"m"`
-		Placeholder   bool   `json:"M"` // add this field to avoid case insensitive unmarshaling
+		Event         string          `json:"e"`
+		Time          millisTimestamp `json:"E"`
+		Symbol        string          `json:"s"`
+		TradeID       int64           `json:"t"`
+		Price         string          `json:"p"`
+		Quantity      string          `json:"q"`
+		BuyerOrderID  int64           `json:"b"`
+		SellerOrderID int64           `json:"a"`
+		TradeTime     millisTimestamp `json:"T"`
+		IsBuyerMaker  bool            `json:"m"`
+		Placeholder   bool            `json:"M"` // add this field to avoid case insensitive unmarshaling
 	}
 	if err := json.Unmarshal(bs, &tmp); err != nil {
 		return err
 	}
 	*t = TradeEvent{
 		Event:         tmp.Event,
-		Time:          time.Unix(0, tmp.Time*int64(time.Millisecond)).UTC(),
+		Time:          time.Time(tmp.Time),
 		Symbol:        tmp.Symbol,
 		TradeID:       tmp.TradeID,
 		Price:         tmp.Price,
 		Quantity:      tmp.Quantity,
 		BuyerOrderID:  tmp.BuyerOrderID,
 		SellerOrderID: tmp.SellerOrderID,
-		TradeTime:     time.Unix(0, tmp.TradeTime*int64(time.Millisecond)).UTC(),
+		TradeTime:     time.Time(tmp.TradeTime),
 		IsBuyerMaker:  tmp.IsBuyerMaker,
 	}
 	return nil
