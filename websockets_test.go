@@ -178,9 +178,9 @@ func TestWebsocketClient_Trades(t *testing.T) {
 			baseURL,_ := url.Parse(BaseURL)
 			dialerDialer := 1
 			_ = dialerDialer
-			uut := &gobinance.WebsocketClient{
-				BaseURL:       baseURL,
-				DialContexter: mockDialer,
+			uut := &gobinance.Client{
+				WebsocketApiURL: baseURL,
+				DialContexter:   mockDialer,
 			}
 
 			trades := uut.Trades(ctx, TestSymbol)

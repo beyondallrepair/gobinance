@@ -7,29 +7,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
-
-//go:generate mockgen -destination=mocks/mock_websockets.go . NextReaderCloser,DialContexter
-// NextReaderCloser provides methods to read the next message in a websocket stream and to close that stream
-type NextReaderCloser interface {
-	NextReader() (int, io.Reader, error)
-	Close() error
-}
-
-// DialContexter provides methods for initiating a websocket stream
-type DialContexter interface {
-	DialContext(ctx context.Context, url string, hdr http.Header) (NextReaderCloser, *http.Response, error)
-}
-
-// WebsocketClient is a client for the binance websockets API
-type WebsocketClient struct {
-	BaseURL       *url.URL
-	DialContexter DialContexter
-}
 
 type readerError struct {
 	io.Reader
@@ -92,7 +73,7 @@ type TradeEventOrError struct {
 // Trades initiates a websocket connection to binance and returns a channel from which live trades can be streamed from
 // binance.  The channel is closed when the underlying context is cancelled, or  upon a connection error or the server
 // closing the connection.
-func (c *WebsocketClient) Trades(ctx context.Context, symbol string) <-chan TradeEventOrError {
+func (c *Client) Trades(ctx context.Context, symbol string) <-chan TradeEventOrError {
 	out := make(chan TradeEventOrError, 1)
 	handle := func(reader io.Reader, err error) {
 		if err != nil {
@@ -116,17 +97,17 @@ func (c *WebsocketClient) Trades(ctx context.Context, symbol string) <-chan Trad
 }
 
 // openWebsocket does some generic handling of websocket streams.  It initiates a connection to the endpoint
-// using the BaseURL from WebsocketClient and the path provided as an input parameter.  For each event streamed
+// using the WebsocketApiURL from WebsocketClient and the path provided as an input parameter.  For each event streamed
 // from the websocket, the `handler` is called.
 //
 // This function blocks until the websocket stream is closed either from the server, or due to the underlying
 // context being cancelled or a connection error.
-func (c *WebsocketClient) openWebsocket(ctx context.Context, path string, handle func(reader io.Reader, err error), after func()) {
+func (c *Client) openWebsocket(ctx context.Context, path string, handle func(reader io.Reader, err error), after func()) {
 	defer after()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	u := c.BaseURL.ResolveReference(&url.URL{
+	u := c.WebsocketApiURL.ResolveReference(&url.URL{
 		Path: path,
 	})
 	con, _, err := c.DialContexter.DialContext(ctx, u.String(), nil)

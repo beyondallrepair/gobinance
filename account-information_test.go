@@ -226,8 +226,8 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				MockSigner: signer,
 			}
 			u, _ := url.Parse(testBaseURL)
-			uut := &gobinance.HttpClient{
-				BaseURL:    u,
+			uut := &gobinance.Client{
+				HTTPApiURL: u,
 				UserAgent:  testUserAgent,
 				APIKey:     testBinanceApiKey,
 				RecvWindow: defaultRecvWindow,

@@ -1,16 +1,40 @@
 package gobinance
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
 )
 
+// AccountInformation fetches data about the account associated with the API Key provided to
+// the client, or an error in the event of connection issues or a non-200 response from binance.
+func (c *Client) AccountInformation(ctx context.Context) (AccountInformation, error) {
+	req, err := c.buildSignedRequest(ctx, http.MethodGet, "/api/v3/account", nil)
+	if err != nil {
+		return AccountInformation{}, fmt.Errorf("error building request: %w", err)
+	}
+	var out AccountInformation
+	if err := performRequest(c.Doer, req, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+// Balance represents the amount of funds associated with a particular asset in this binance
+// account
 type Balance struct {
-	Asset  string
-	Free   string
+	// Asset is the symbol of the asset in question
+	Asset string
+	// Free is the amount of that asset that is currently available for trading
+	Free string
+	// Locked is the amount of that asset that is not available, due to being associated
+	// with other open orders.
 	Locked string
 }
 
+// AccountInformation is the response of an AccountInformation request from binance
 type AccountInformation struct {
 	MakerCommission  int64
 	TakerCommission  int64
@@ -21,9 +45,8 @@ type AccountInformation struct {
 	CanDeposit       bool
 	UpdateTime       time.Time
 	AccountType      string
-	// Balances is a map of asset to its balance
-	Balances    map[string]Balance
-	Permissions []string
+	Balances         map[string]Balance
+	Permissions      []string
 }
 
 func (t *AccountInformation) UnmarshalJSON(bs []byte) error {
