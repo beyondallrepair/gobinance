@@ -118,7 +118,7 @@ func (c *Client) openWebsocket(ctx context.Context, path string, handle func(rea
 	}
 	defer con.Close()
 
-	wsMessages := make(chan readerError, 0)
+	wsMessages := make(chan readerError)
 	go func() {
 		defer close(wsMessages)
 		for {
