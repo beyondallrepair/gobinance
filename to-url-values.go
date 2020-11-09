@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+// toURLValues converts a structure into url.Values
+// It respects the `param` tag, which is a comma separated list of directives.
+//
+// The first item in the tag is the key to be used for that field in the output url.Values.
+// If that value is -, then the field is always omitted.
+// If `omitempty` is provided in any of the directives after the first (i.e. the name), then
+// the field will not be in the output when the value of that field is the Zero value of its type.
+//
+// The `emptyvalue` tag may be used to specify the value to be used in the output when the field is empty.
 func toURLValues(i interface{}) (url.Values, error) {
 	out := url.Values{}
 
@@ -16,9 +25,9 @@ func toURLValues(i interface{}) (url.Values, error) {
 	}
 
 	iVal := reflect.ValueOf(i)
-	omitEmpty := false
 
 	for f := 0; f < iType.NumField(); f++ {
+		omitEmpty := false
 		if !iVal.Field(f).CanInterface() {
 			// private
 			continue
@@ -34,16 +43,23 @@ func toURLValues(i interface{}) (url.Values, error) {
 				continue
 			}
 			for _, v := range tag[1:] {
-				if v == "omitempty" {
+				switch v {
+				case "omitempty":
 					omitEmpty = true
 				}
 			}
 		}
 
-		if iVal.Field(f).IsZero() && omitEmpty {
+		stringValue := fmt.Sprint(iVal.Field(f).Interface())
+		if iVal.Field(f).IsZero() {
+			if omitEmpty {
 			continue
+			}
+			if v := iType.Field(f).Tag.Get("emptyvalue"); v != "" {
+				stringValue = v
+			}
 		}
-		out.Add(name, fmt.Sprint(iVal.Field(f).Interface()))
+		out.Add(name, stringValue)
 	}
 	return out, nil
 }

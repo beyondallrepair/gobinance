@@ -81,22 +81,44 @@ func TestToURLValues(t *testing.T) {
 		},
 		{
 			name: "omitempty",
-			input: struct{
-				EmptyInt int `param:"EmptyInt,omitempty"`
-				EmptyBigFloat *big.Float `param:"EmptyBigFloat,omitempty"`
-				EmptyString string `param:"EmptyString,omitempty"`
-				NonEmptyInt int `param:"NonEmptyInt,omitempty"`
+			input: struct {
+				EmptyInt         int        `param:"EmptyInt,omitempty"`
+				EmptyBigFloat    *big.Float `param:"EmptyBigFloat,omitempty"`
+				EmptyString      string     `param:"EmptyString,omitempty"`
+				NonEmptyInt      int        `param:"NonEmptyInt,omitempty"`
 				NonEmptyBigFloat *big.Float `param:"NonEmptyBigFloat,omitempty"`
-				NonEmptyString string `param:"NonEmptyString,omitempty"`
+				NonEmptyString   string     `param:"NonEmptyString,omitempty"`
 			}{
-				NonEmptyInt: 1,
+				NonEmptyInt:      1,
 				NonEmptyBigFloat: big.NewFloat(2),
-				NonEmptyString: "three",
+				NonEmptyString:   "three",
 			},
 			expectedOutput: url.Values{
-				"NonEmptyInt": []string{"1"},
+				"NonEmptyInt":      []string{"1"},
 				"NonEmptyBigFloat": []string{"2"},
-				"NonEmptyString": []string{"three"},
+				"NonEmptyString":   []string{"three"},
+			},
+		},
+		{
+			name: "zero-values without omitempty",
+			input: struct {
+				EmptyInt      int        `param:"EmptyInt"`
+				EmptyBigFloat *big.Float `param:"EmptyBigFloat"`
+				EmptyString   string     `param:"EmptyString"`
+			}{},
+			expectedOutput: url.Values{
+				"EmptyInt":      []string{"0"},
+				"EmptyBigFloat": []string{"<nil>"},
+				"EmptyString":   []string{""},
+			},
+		},
+		{
+			name: "zero-values with emptyvalue",
+			input: struct {
+				EmptyBigFloat *big.Float `param:"EmptyBigFloat" emptyvalue:"someString"`
+			}{},
+			expectedOutput: url.Values{
+				"EmptyBigFloat": []string{"someString"},
 			},
 		},
 	}
