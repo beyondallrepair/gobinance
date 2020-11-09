@@ -22,7 +22,7 @@ type spotOrderTestCase struct {
 	ctx            context.Context
 	options        []gobinance.SpotOrderOption
 	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error)
-	errorCheck     func(t *testing.T, err error) bool
+	errorCheck     errorCheck
 	expectedResult gobinance.SpotOrderResult
 }
 

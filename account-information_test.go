@@ -31,7 +31,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		name           string
 		testContext    context.Context
 		setup          func(*testing.T, *clientMocks)
-		errorCheck     func(t *testing.T, err error) bool
+		errorCheck     errorCheck
 		expectedResult gobinance.AccountInformation
 	}{
 		{
