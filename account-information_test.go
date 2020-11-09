@@ -23,7 +23,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		testBaseURL       = "https://example.com"
 		defaultRecvWindow = 3 * time.Second
 		currentTimeMillis = 1234567890123
-		mockSignature = "mock-signature"
+		mockSignature     = "mock-signature"
 	)
 
 	var (
@@ -31,7 +31,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		mockNow         = func() time.Time {
 			return mockCurrentTime
 		}
-		testContext = context.WithValue(context.Background(), "test","value")
+		testContext = context.WithValue(context.Background(), "test", "value")
 	)
 
 	errNil := func(t *testing.T, err error) bool {
@@ -53,7 +53,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 	httpError := func(expectedStatus int, expectedErrCode int) func(*testing.T, error) bool {
 		return func(t *testing.T, err error) bool {
 			t.Helper()
-			herr, ok := err.(interface{
+			herr, ok := err.(interface {
 				StatusCode() int
 				ErrorCode() int
 			})
@@ -106,11 +106,11 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 
 				mockResponse := &http.Response{
 					StatusCode: 400,
-					Body: ioutil.NopCloser(strings.NewReader(fmt.Sprintf(`{ "code": %d, "msg": "doesn't matter" }`,-1234))),
+					Body:       ioutil.NopCloser(strings.NewReader(fmt.Sprintf(`{ "code": %d, "msg": "doesn't matter" }`, -1234))),
 				}
 				mocks.MockDoer.EXPECT().Do(expectedRequest).Return(mockResponse, nil)
 			},
-			errorCheck: httpError(400,-1234),
+			errorCheck: httpError(400, -1234),
 		},
 		{
 			name:        "corrupt ok response",
@@ -119,7 +119,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mockResponse := &http.Response{
 					StatusCode: 200,
-					Body: ioutil.NopCloser(strings.NewReader(`not json`)),
+					Body:       ioutil.NopCloser(strings.NewReader(`not json`)),
 				}
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Return(mockResponse, nil)
 			},
@@ -132,23 +132,23 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mockResponse := &http.Response{
 					StatusCode: 400,
-					Body: ioutil.NopCloser(strings.NewReader(`not json`)),
+					Body:       ioutil.NopCloser(strings.NewReader(`not json`)),
 				}
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Return(mockResponse, nil)
 			},
 			errorCheck: httpError(400, 0),
 		},
 		{
-			name: "request error",
+			name:        "request error",
 			testContext: testContext,
-			setup: func(t * testing.T, mocks *mocks) {
+			setup: func(t *testing.T, mocks *mocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Return(nil, fmt.Errorf("test error"))
 			},
 			errorCheck: errNotNil,
 		},
 		{
-			name: "ok",
+			name:        "ok",
 			testContext: testContext,
 			setup: func(t *testing.T, mocks *mocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
@@ -193,21 +193,21 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				CanTrade:         true,
 				CanWithdraw:      true,
 				CanDeposit:       true,
-				UpdateTime:       time.Unix(0,int64(123456789321*time.Millisecond)),
+				UpdateTime:       time.Unix(0, int64(123456789321*time.Millisecond)),
 				AccountType:      "SPOT",
 				Balances: map[string]gobinance.Balance{
 					"BTC": {
 						Asset:  "BTC",
-						Free:   "4723846.89208129",
-						Locked: "1.00000000",
+						Free:   mustParseBigFloat(t, "4723846.89208129"),
+						Locked: mustParseBigFloat(t, "1.00000000"),
 					},
 					"LTC": {
-						Asset: "LTC",
-						Free: "4763368.68006011",
-						Locked:"2.00000000",
+						Asset:  "LTC",
+						Free:   mustParseBigFloat(t, "4763368.68006011"),
+						Locked: mustParseBigFloat(t, "2.00000000"),
 					},
 				},
-				Permissions:      []string{"SPOT"},
+				Permissions: []string{"SPOT"},
 			},
 		},
 	}
@@ -242,7 +242,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				return
 			}
 
-			if diff := cmp.Diff(tc.expectedResult, got); diff != "" {
+			if diff := cmp.Diff(tc.expectedResult, got, bigFloatComparer); diff != "" {
 				t.Errorf("unexpected result: %v", diff)
 			}
 		})

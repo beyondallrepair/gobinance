@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"time"
 )
@@ -28,10 +29,10 @@ type Balance struct {
 	// Asset is the symbol of the asset in question
 	Asset string
 	// Free is the amount of that asset that is currently available for trading
-	Free string
+	Free *big.Float
 	// Locked is the amount of that asset that is not available, due to being associated
 	// with other open orders.
-	Locked string
+	Locked *big.Float
 }
 
 // AccountInformation is the response of an AccountInformation request from binance

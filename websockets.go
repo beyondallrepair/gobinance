@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/url"
 	"strings"
 	"time"
@@ -23,8 +24,8 @@ type TradeEvent struct {
 	Time          time.Time
 	Symbol        string
 	TradeID       int64
-	Price         string
-	Quantity      string
+	Price         *big.Float
+	Quantity      *big.Float
 	BuyerOrderID  int64
 	SellerOrderID int64
 	TradeTime     time.Time
@@ -38,8 +39,8 @@ func (t *TradeEvent) UnmarshalJSON(bs []byte) error {
 		Time          millisTimestamp `json:"E"`
 		Symbol        string          `json:"s"`
 		TradeID       int64           `json:"t"`
-		Price         string          `json:"p"`
-		Quantity      string          `json:"q"`
+		Price         *big.Float      `json:"p"`
+		Quantity      *big.Float      `json:"q"`
 		BuyerOrderID  int64           `json:"b"`
 		SellerOrderID int64           `json:"a"`
 		TradeTime     millisTimestamp `json:"T"`

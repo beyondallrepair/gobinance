@@ -36,7 +36,7 @@ func TestWebsocketClient_Trades(t *testing.T) {
 	}{
 		{
 			name: "dialer errors",
-			setup: func(ctx context.Context, mocks *mocks) context.Context{
+			setup: func(ctx context.Context, mocks *mocks) context.Context {
 				mocks.MockDialContexter.EXPECT().DialContext(
 					gomock.Not(gomock.Nil()),
 					fmt.Sprintf("%s/ws/%s@trade", BaseURL, TestSymbolEncoded),
@@ -100,7 +100,7 @@ func TestWebsocketClient_Trades(t *testing.T) {
 				mocks.MockNextReaderCloser.EXPECT().NextReader().Return(0, nil, testError).After(third)
 				return ctx
 			},
-			expectations: func(events []gobinance.TradeEventOrError){
+			expectations: func(events []gobinance.TradeEventOrError) {
 				if l := len(events); l != 4 {
 					t.Fatalf("expected 4 events but got %v", l)
 				}
@@ -113,48 +113,48 @@ func TestWebsocketClient_Trades(t *testing.T) {
 					{
 						TradeEvent: gobinance.TradeEvent{
 							Event:         "trade",
-							Time:          time.Date(2020,11,06,23,30,34,642*int(time.Millisecond), time.UTC),
+							Time:          time.Date(2020, 11, 06, 23, 30, 34, 642*int(time.Millisecond), time.UTC),
 							Symbol:        "BTCUSDT",
 							TradeID:       455634704,
-							Price:         "15617.99000000",
-							Quantity:      "0.00720000",
+							Price:         mustParseBigFloat(t, "15617.99000000"),
+							Quantity:      mustParseBigFloat(t, "0.00720000"),
 							BuyerOrderID:  3530255770,
 							SellerOrderID: 3530255647,
-							TradeTime:     time.Date(2020,11,06,23,30,34,637*int(time.Millisecond), time.UTC),
+							TradeTime:     time.Date(2020, 11, 06, 23, 30, 34, 637*int(time.Millisecond), time.UTC),
 							IsBuyerMaker:  false,
 						},
 					},
 					{
 						TradeEvent: gobinance.TradeEvent{
 							Event:         "trade",
-							Time:          time.Date(2020,11,06,23,30,34,643*int(time.Millisecond), time.UTC),
+							Time:          time.Date(2020, 11, 06, 23, 30, 34, 643*int(time.Millisecond), time.UTC),
 							Symbol:        "BTCUSDT",
 							TradeID:       455634705,
-							Price:         "15617.98000000",
-							Quantity:      "0.00200000",
+							Price:         mustParseBigFloat(t, "15617.98000000"),
+							Quantity:      mustParseBigFloat(t, "0.00200000"),
 							BuyerOrderID:  3530255771,
 							SellerOrderID: 3530255668,
-							TradeTime:     time.Date(2020,11,06,23,30,34,638*int(time.Millisecond), time.UTC),
+							TradeTime:     time.Date(2020, 11, 06, 23, 30, 34, 638*int(time.Millisecond), time.UTC),
 							IsBuyerMaker:  true,
 						},
 					},
 					{
 						TradeEvent: gobinance.TradeEvent{
 							Event:         "trade",
-							Time:          time.Date(2020,11,06,23,30,34,644*int(time.Millisecond), time.UTC),
+							Time:          time.Date(2020, 11, 06, 23, 30, 34, 644*int(time.Millisecond), time.UTC),
 							Symbol:        "BTCUSDT",
 							TradeID:       455634706,
-							Price:         "15617.97000000",
-							Quantity:      "0.05085100",
+							Price:         mustParseBigFloat(t, "15617.97000000"),
+							Quantity:      mustParseBigFloat(t, "0.05085100"),
 							BuyerOrderID:  3530255772,
 							SellerOrderID: 3530255737,
-							TradeTime:     time.Date(2020,11,06,23,30,34,639*int(time.Millisecond), time.UTC),
+							TradeTime:     time.Date(2020, 11, 06, 23, 30, 34, 639*int(time.Millisecond), time.UTC),
 							IsBuyerMaker:  false,
 						},
 					},
 				}
-				if diff := cmp.Diff(expected, events[0:3]); diff != "" {
-					t.Errorf("unexpected events.  %s",diff)
+				if diff := cmp.Diff(expected, events[0:3], bigFloatComparer); diff != "" {
+					t.Errorf("unexpected events.  %s", diff)
 				}
 			},
 		},
@@ -175,7 +175,7 @@ func TestWebsocketClient_Trades(t *testing.T) {
 				MockNextReaderCloser: mockNextReader,
 			})
 
-			baseURL,_ := url.Parse(BaseURL)
+			baseURL, _ := url.Parse(BaseURL)
 			dialerDialer := 1
 			_ = dialerDialer
 			uut := &gobinance.Client{
