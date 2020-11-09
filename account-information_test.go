@@ -17,14 +17,6 @@ import (
 
 func TestHttpClient_AccountInformation(t *testing.T) {
 	t.Parallel()
-	const (
-		testBinanceApiKey = "test-binance-api-key"
-		testUserAgent     = "test-user-agent"
-		testBaseURL       = "https://example.com"
-		defaultRecvWindow = 3 * time.Second
-		currentTimeMillis = 1234567890123
-		mockSignature     = "mock-signature"
-	)
 
 	type testContextKey string
 	var (
@@ -35,71 +27,28 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		testContext = context.WithValue(context.Background(), testContextKey("test"), "value")
 	)
 
-	errNil := func(t *testing.T, err error) bool {
-		t.Helper()
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		return true
-	}
-
-	errNotNil := func(t *testing.T, err error) bool {
-		t.Helper()
-		if err == nil {
-			t.Errorf("expectex an error but got nil")
-		}
-		return false
-	}
-
-	httpError := func(expectedStatus int, expectedErrCode int) func(*testing.T, error) bool {
-		return func(t *testing.T, err error) bool {
-			t.Helper()
-			herr, ok := err.(interface {
-				StatusCode() int
-				ErrorCode() int
-			})
-
-			if !ok {
-				t.Errorf("the error %#v did not implement the expected interface", err)
-				return false
-			}
-			if gotStatus := herr.StatusCode(); gotStatus != expectedStatus {
-				t.Errorf("unexpected status code.  expected %v but got %v", expectedStatus, gotStatus)
-			}
-			if gotErrCode := herr.ErrorCode(); gotErrCode != expectedErrCode {
-				t.Errorf("unexpected error code.  expected %v but got %v", expectedErrCode, gotErrCode)
-			}
-			return false
-		}
-	}
-
-	type mocks struct {
-		*mock_gobinance.MockDoer
-		*mock_gobinance.MockSigner
-	}
-
 	testCases := []struct {
 		name           string
 		testContext    context.Context
-		setup          func(*testing.T, *mocks)
-		errorCheck     func(t *testing.T, err error) bool
+		setup          func(*testing.T, *clientMocks)
+		errorCheck     errorCheck
 		expectedResult gobinance.AccountInformation
 	}{
 		{
 			name:       "nil context",
 			errorCheck: errNotNil,
-			setup: func(t *testing.T, mocks *mocks) {
-				params := fmt.Sprintf("recvWindow=%d&timestamp=%d", defaultRecvWindow.Milliseconds(), currentTimeMillis)
+			setup: func(t *testing.T, mocks *clientMocks) {
+				params := fmt.Sprintf("recvWindow=%d&timestamp=%d", testRecvWindow.Milliseconds(), currentTimeMillis)
 				mocks.MockSigner.EXPECT().Sign(params).Return(mockSignature)
 			},
 		},
 		{
 			name:        "binance error",
 			testContext: testContext,
-			setup: func(t *testing.T, mocks *mocks) {
-				params := fmt.Sprintf("recvWindow=%d&timestamp=%d", defaultRecvWindow.Milliseconds(), currentTimeMillis)
+			setup: func(t *testing.T, mocks *clientMocks) {
+				params := fmt.Sprintf("recvWindow=%d&timestamp=%d", testRecvWindow.Milliseconds(), currentTimeMillis)
 				mocks.MockSigner.EXPECT().Sign(params).Return(mockSignature)
-				signedParams := fmt.Sprintf("recvWindow=%d&signature=%s&timestamp=%d", defaultRecvWindow.Milliseconds(), mockSignature, currentTimeMillis)
+				signedParams := fmt.Sprintf("recvWindow=%d&signature=%s&timestamp=%d", testRecvWindow.Milliseconds(), mockSignature, currentTimeMillis)
 
 				expectedRequest, _ := http.NewRequestWithContext(testContext, http.MethodGet, testBaseURL+"/api/v3/account?"+signedParams, nil)
 				expectedRequest.Header.Set("User-Agent", testUserAgent)
@@ -111,12 +60,12 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				}
 				mocks.MockDoer.EXPECT().Do(expectedRequest).Return(mockResponse, nil)
 			},
-			errorCheck: httpError(400, -1234),
+			errorCheck: isHttpError(400, -1234),
 		},
 		{
 			name:        "corrupt ok response",
 			testContext: testContext,
-			setup: func(t *testing.T, mocks *mocks) {
+			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mockResponse := &http.Response{
 					StatusCode: 200,
@@ -129,7 +78,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		{
 			name:        "corrupt error response",
 			testContext: testContext,
-			setup: func(t *testing.T, mocks *mocks) {
+			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mockResponse := &http.Response{
 					StatusCode: 400,
@@ -137,12 +86,12 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				}
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Return(mockResponse, nil)
 			},
-			errorCheck: httpError(400, 0),
+			errorCheck: isHttpError(400, 0),
 		},
 		{
 			name:        "request error",
 			testContext: testContext,
-			setup: func(t *testing.T, mocks *mocks) {
+			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Return(nil, fmt.Errorf("test error"))
 			},
@@ -151,7 +100,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		{
 			name:        "ok",
 			testContext: testContext,
-			setup: func(t *testing.T, mocks *mocks) {
+			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Return(&http.Response{
 					StatusCode: 200,
@@ -222,7 +171,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 
 			doer := mock_gobinance.NewMockDoer(ctrl)
 			signer := mock_gobinance.NewMockSigner(ctrl)
-			mocks := &mocks{
+			mocks := &clientMocks{
 				MockDoer:   doer,
 				MockSigner: signer,
 			}
@@ -231,7 +180,7 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 				HTTPApiURL: u,
 				UserAgent:  testUserAgent,
 				APIKey:     testBinanceApiKey,
-				RecvWindow: defaultRecvWindow,
+				RecvWindow: testRecvWindow,
 				Signer:     signer,
 				Doer:       doer,
 				Now:        mockNow,
