@@ -26,12 +26,13 @@ func TestHttpClient_AccountInformation(t *testing.T) {
 		mockSignature     = "mock-signature"
 	)
 
+	type testContextKey string
 	var (
 		mockCurrentTime = time.Unix(0, int64(currentTimeMillis*time.Millisecond))
 		mockNow         = func() time.Time {
 			return mockCurrentTime
 		}
-		testContext = context.WithValue(context.Background(), "test", "value")
+		testContext = context.WithValue(context.Background(), testContextKey("test"), "value")
 	)
 
 	errNil := func(t *testing.T, err error) bool {
