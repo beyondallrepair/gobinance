@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// OpenOrderOptions is a function that applies optional parameters or orverrides to a
+// OpenOrderOptions is a function that applies optional parameters or overrides to a
 // function to query fetch orders
 type OpenOrderOptions func(input *openOrderInput)
 
