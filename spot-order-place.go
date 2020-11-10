@@ -86,6 +86,7 @@ func (s *SpotOrderResult) UnmarshalJSON(bs []byte) error {
 	return nil
 }
 
+// SpotOrderOption is a function that applies optional values / overrides to a spot order
 type SpotOrderOption func(s *spotOrderInput)
 
 // SpotClientOrderID is a SpotOrderOption which sets the NewClientOrderID value of a spot
