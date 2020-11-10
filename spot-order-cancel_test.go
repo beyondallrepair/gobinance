@@ -25,9 +25,11 @@ func TestClient_CancelOrderByClientOrderID(t *testing.T) {
 		return uut.CancelOrderByClientOrderID(ctx, testSymbol, testClientOrderID, options...)
 	}
 
-	cases := commonSpotCancelTestCases(map[string][]string{
-		"symbol":            {testSymbol},
-		"origClientOrderId": {testClientOrderID},
+	cases := commonSpotCancelTestCases(func() url.Values {
+		return map[string][]string{
+			"symbol":            {testSymbol},
+			"origClientOrderId": {testClientOrderID},
+		}
 	}, call)
 	runCancelOrderTestCases(t, cases...)
 }
@@ -42,9 +44,11 @@ func TestClient_CancelOrderByOrderID(t *testing.T) {
 		return uut.CancelOrderByOrderID(ctx, testSymbol, testOrderID, options...)
 	}
 
-	cases := commonSpotCancelTestCases(map[string][]string{
-		"symbol":  {testSymbol},
-		"orderId": {fmt.Sprint(testOrderID)},
+	cases := commonSpotCancelTestCases(func() url.Values {
+		return map[string][]string{
+			"symbol":  {testSymbol},
+			"orderId": {fmt.Sprint(testOrderID)},
+		}
 	}, call)
 	runCancelOrderTestCases(t, cases...)
 }
@@ -59,11 +63,15 @@ type cancelOrderTestCase struct {
 	expectedResult gobinance.CancelSpotOrderResult
 }
 
-func commonSpotCancelTestCases(expectedValues url.Values, call func(context.Context, *gobinance.Client, []gobinance.CancelSpotOrderOption) (gobinance.CancelSpotOrderResult, error)) []cancelOrderTestCase {
+func commonSpotCancelTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.CancelSpotOrderOption) (gobinance.CancelSpotOrderResult, error)) []cancelOrderTestCase {
+	// note that some tests modify the expected url.Values in place.  Therefore, to avoid
+	// races, the expectedValues function should return a newly constructed url.Values map
+	// with the expected values in it.
 	return []cancelOrderTestCase{
 		{
 			name: "request values",
 			setup: func(t *testing.T, mocks *clientMocks) {
+				expectedValues := expectedValues()
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
 					if req.Method != http.MethodDelete {
@@ -126,6 +134,7 @@ func commonSpotCancelTestCases(expectedValues url.Values, call func(context.Cont
 		{
 			name: "cancelSpotClientOrderID",
 			setup: func(t *testing.T, mocks *clientMocks) {
+				expectedValues := expectedValues()
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
 					if val := req.URL.Query().Get("newClientOrderId"); val != "testOrderID" {
