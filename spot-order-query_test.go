@@ -123,6 +123,24 @@ func commonSpotQueryTestCases(expectedValues func() url.Values, call func(contex
 			errorCheck: errNotNil,
 		},
 		{
+			name: "QueryOrderRecvWindow",
+			setup: func(t *testing.T, mocks *clientMocks) {
+				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
+				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
+					expected := fmt.Sprint((testRecvWindow + time.Second).Milliseconds())
+					if got := req.URL.Query().Get("recvWindow"); got != expected {
+						t.Errorf("unexpected value for recvWindow. expected %v but got %v", expected, got)
+					}
+				}).Return(nil, fmt.Errorf("stop early"))
+			},
+			options: []gobinance.QueryOrderOption{
+				gobinance.QueryOrderRecvWindow(testRecvWindow + time.Second),
+			},
+			ctx:        context.Background(),
+			call:       call,
+			errorCheck: errNotNil,
+		},
+		{
 			name: "success",
 			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)

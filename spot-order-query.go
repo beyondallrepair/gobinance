@@ -4,10 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // QueryOrderOption is a function that applies optional parameters / overrides to a query order operation
 type QueryOrderOption func(input *queryOrderInput)
+
+// QueryOrderRecvWindow overrides the default receive window for a query order operation
+func QueryOrderRecvWindow (d time.Duration) QueryOrderOption {
+	return func(input *queryOrderInput) {
+		input.RecvWindow = d.Milliseconds()
+	}
+}
 
 // QueryOrderByID fetches the order whose ID as assigned by the exchange is orderID
 func (c *Client) QueryOrderByID(ctx context.Context, symbol string, orderID int64, opts ...QueryOrderOption) (SpotOrder, error) {
@@ -53,4 +61,5 @@ type queryOrderInput struct {
 	Symbol            string `param:"symbol"`
 	OrderID           int64  `param:"orderId,omitempty"`
 	OrigClientOrderID string `param:"origClientOrderId,omitempty"`
+	RecvWindow        int64  `param:"recvWindow,omitempty"`
 }

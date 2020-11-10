@@ -4,16 +4,25 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 )
 
-// OpenOrderOptions is a function that applies optional parameters or overrides to a
+// OpenOrdersOptions is a function that applies optional parameters or overrides to a
 // function to query fetch orders
-type OpenOrderOptions func(input *openOrderInput)
+type OpenOrdersOptions func(input *openOrderInput)
+
+// OpenOrdersRecvWindow overrides the receive window for an OpenOrder call.
+// See Client.ReceiveWindow for more information
+func OpenOrdersRecvWindow(d time.Duration) OpenOrdersOptions {
+	return func(input *openOrderInput) {
+		input.RecvWindow = d.Milliseconds()
+	}
+}
 
 // OpenSpotOrdersForSymbol fetches the open orders on the specified symbol
-func (c *Client) OpenSpotOrdersForSymbol(ctx context.Context, symbol string, opts ...OpenOrderOptions) ([]SpotOrder, error) {
+func (c *Client) OpenSpotOrdersForSymbol(ctx context.Context, symbol string, opts ...OpenOrdersOptions) ([]SpotOrder, error) {
 	input := openOrderInput{
-		Symbol:  symbol,
+		Symbol: symbol,
 	}
 	return c.openOrders(ctx, input, opts)
 }
@@ -21,22 +30,23 @@ func (c *Client) OpenSpotOrdersForSymbol(ctx context.Context, symbol string, opt
 // AllOpenSpotOrders fetches all open spot orders on this account, regardless of symbol.
 //
 // Note that this is an expensive operation, call it sparingly.
-func (c *Client) AllOpenSpotOrders(ctx context.Context, opts ...OpenOrderOptions) ([]SpotOrder, error) {
+func (c *Client) AllOpenSpotOrders(ctx context.Context, opts ...OpenOrdersOptions) ([]SpotOrder, error) {
 	input := openOrderInput{}
 	return c.openOrders(ctx, input, opts)
 }
 
 type openOrderInput struct {
-	Symbol string `param:"symbol,omitempty"`
+	Symbol     string `param:"symbol,omitempty"`
+	RecvWindow int64  `param:"recvWindow,omitempty"`
 }
 
-func applyOpenOrderOptions(input *openOrderInput, opts ...OpenOrderOptions) {
+func applyOpenOrderOptions(input *openOrderInput, opts ...OpenOrdersOptions) {
 	for _, o := range opts {
 		o(input)
 	}
 }
 
-func (c *Client) openOrders(ctx context.Context, input openOrderInput, opts []OpenOrderOptions) ([]SpotOrder, error) {
+func (c *Client) openOrders(ctx context.Context, input openOrderInput, opts []OpenOrdersOptions) ([]SpotOrder, error) {
 	applyOpenOrderOptions(&input, opts...)
 	params, err := toURLValues(input)
 	if err != nil {

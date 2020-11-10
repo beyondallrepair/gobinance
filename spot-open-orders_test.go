@@ -17,7 +17,7 @@ import (
 )
 
 func TestClient_AllOpenSpotOrders(t *testing.T) {
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error) {
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error) {
 		return uut.AllOpenSpotOrders(ctx, options...)
 	}
 	cases := commonOpenOrdersTestCases(func() url.Values {
@@ -30,7 +30,7 @@ func TestClient_OpenSpotOrdersForSymbol(t *testing.T) {
 	const (
 		testSymbol = "testSymbol"
 	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error) {
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error) {
 		return uut.OpenSpotOrdersForSymbol(ctx, testSymbol, options...)
 	}
 	cases := commonOpenOrdersTestCases(func() url.Values {
@@ -41,8 +41,7 @@ func TestClient_OpenSpotOrdersForSymbol(t *testing.T) {
 	runOpenOrdersTestCases(t, cases...)
 }
 
-
-func commonOpenOrdersTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error)) []openOrdersTestCase {
+func commonOpenOrdersTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error)) []openOrdersTestCase {
 	// note that some tests modify the expected url.Values in place.  Therefore, to avoid
 	// races, the expectedValues function should return a newly constructed url.Values map
 	// with the expected values in it.
@@ -111,6 +110,24 @@ func commonOpenOrdersTestCases(expectedValues func() url.Values, call func(conte
 			errorCheck: errNotNil,
 		},
 		{
+			name: "OpenOrdersReceiveWindow",
+			setup: func(t *testing.T, mocks *clientMocks) {
+				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
+				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
+					expected := fmt.Sprint((testRecvWindow + time.Second).Milliseconds())
+					if got := req.URL.Query().Get("recvWindow"); got != expected {
+						t.Errorf("unexpected value for recvWindow. expected %v but got %v", expected, got)
+					}
+				}).Return(nil, fmt.Errorf("stop early"))
+			},
+			options: []gobinance.OpenOrdersOptions{
+				gobinance.OpenOrdersRecvWindow(testRecvWindow + time.Second),
+			},
+			ctx:        context.Background(),
+			call:       call,
+			errorCheck: errNotNil,
+		},
+		{
 			name: "success",
 			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
@@ -147,35 +164,36 @@ func commonOpenOrdersTestCases(expectedValues func() url.Values, call func(conte
 			errorCheck: errNil,
 			expectedResult: []gobinance.SpotOrder{
 				{
-					Symbol: "LTCBTC",
-					OrderID: 1,
-					OrderListID: -1,
-					ClientOrderID: "myOrder1",
-					Price: big.NewFloat(0.25),
-					OriginalQty: big.NewFloat(1.25),
-					ExecutedQty: big.NewFloat(2.25),
-					CumulativeQuoteQty: big.NewFloat(3.25),
-					Status: gobinance.OrderStatusNew,
-					TimeInForce: gobinance.TimeInForceGoodTilCanceled,
-					Type: gobinance.OrderTypeLimit,
-					Side: gobinance.OrderSideBuy,
-					StopPrice: big.NewFloat(4.25),
-					IcebergQty: big.NewFloat(5.25),
-					Time: time.Date(2017,07,12,02,41,59,int(559*time.Millisecond),time.UTC),
-					UpdateTime: time.Date(2017,07,12,02,41,59,int(560*time.Millisecond),time.UTC),
-					IsWorking: true,
+					Symbol:                "LTCBTC",
+					OrderID:               1,
+					OrderListID:           -1,
+					ClientOrderID:         "myOrder1",
+					Price:                 big.NewFloat(0.25),
+					OriginalQty:           big.NewFloat(1.25),
+					ExecutedQty:           big.NewFloat(2.25),
+					CumulativeQuoteQty:    big.NewFloat(3.25),
+					Status:                gobinance.OrderStatusNew,
+					TimeInForce:           gobinance.TimeInForceGoodTilCanceled,
+					Type:                  gobinance.OrderTypeLimit,
+					Side:                  gobinance.OrderSideBuy,
+					StopPrice:             big.NewFloat(4.25),
+					IcebergQty:            big.NewFloat(5.25),
+					Time:                  time.Date(2017, 07, 12, 02, 41, 59, int(559*time.Millisecond), time.UTC),
+					UpdateTime:            time.Date(2017, 07, 12, 02, 41, 59, int(560*time.Millisecond), time.UTC),
+					IsWorking:             true,
 					OriginalQuoteOrderQty: big.NewFloat(6.25),
 				},
 			},
 		},
 	}
 }
+
 type openOrdersTestCase struct {
 	name           string
 	setup          func(t *testing.T, mocks *clientMocks)
 	ctx            context.Context
-	options        []gobinance.OpenOrderOptions
-	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error)
+	options        []gobinance.OpenOrdersOptions
+	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error)
 	errorCheck     errorCheck
 	expectedResult []gobinance.SpotOrder
 }
