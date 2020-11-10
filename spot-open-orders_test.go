@@ -16,49 +16,37 @@ import (
 	"time"
 )
 
-func TestClient_QueryOrderByClientID(t *testing.T) {
-	t.Parallel()
-	const (
-		testSymbol        = "testSymbol"
-		testClientOrderID = "someClientID"
-	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.SpotOrder, error) {
-		return uut.QueryOrderByClientID(ctx, testSymbol, testClientOrderID, options...)
+func TestClient_AllOpenSpotOrders(t *testing.T) {
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error) {
+		return uut.AllOpenSpotOrders(ctx, options...)
 	}
-
-	cases := commonSpotQueryTestCases(func() url.Values {
-		return map[string][]string{
-			"symbol":            {testSymbol},
-			"origClientOrderId": {testClientOrderID},
-		}
+	cases := commonOpenOrdersTestCases(func() url.Values {
+		return url.Values{}
 	}, call)
-	runQueryOrderTestCases(t, cases...)
+	runOpenOrdersTestCases(t, cases...)
 }
 
-func TestClient_QueryOrderByID(t *testing.T) {
-	t.Parallel()
+func TestClient_OpenSpotOrdersForSymbol(t *testing.T) {
 	const (
 		testSymbol = "testSymbol"
-		orderID    = 1234
 	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.SpotOrder, error) {
-		return uut.QueryOrderByID(ctx, testSymbol, orderID, options...)
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error) {
+		return uut.OpenSpotOrdersForSymbol(ctx, testSymbol, options...)
 	}
-
-	cases := commonSpotQueryTestCases(func() url.Values {
+	cases := commonOpenOrdersTestCases(func() url.Values {
 		return map[string][]string{
-			"symbol":  {testSymbol},
-			"orderId": {fmt.Sprint(orderID)},
+			"symbol": {testSymbol},
 		}
 	}, call)
-	runQueryOrderTestCases(t, cases...)
+	runOpenOrdersTestCases(t, cases...)
 }
 
-func commonSpotQueryTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.QueryOrderOption) (gobinance.SpotOrder, error)) []queryOrderTestCase {
+
+func commonOpenOrdersTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error)) []openOrdersTestCase {
 	// note that some tests modify the expected url.Values in place.  Therefore, to avoid
 	// races, the expectedValues function should return a newly constructed url.Values map
 	// with the expected values in it.
-	return []queryOrderTestCase{
+	return []openOrdersTestCase{
 		{
 			name: "request values",
 			setup: func(t *testing.T, mocks *clientMocks) {
@@ -68,7 +56,7 @@ func commonSpotQueryTestCases(expectedValues func() url.Values, call func(contex
 					if req.Method != http.MethodGet {
 						t.Errorf("unexpected http method: expected %v but got %v", http.MethodGet, req.Method)
 					}
-					if req.URL.Path != "/api/v3/order" {
+					if req.URL.Path != "/api/v3/openOrders" {
 						t.Errorf("unexpected path: expected %v but got %v", "/api/v3/order", req.URL.Path)
 					}
 					if hdr := req.Header.Get("X-MBX-APIKEY"); hdr != testBinanceApiKey {
@@ -130,66 +118,69 @@ func commonSpotQueryTestCases(expectedValues func() url.Values, call func(contex
 					StatusCode: 200,
 					// from the binance documentation, but with values modified to
 					// confirm fields are being correctly assigned
-					Body: ioutil.NopCloser(strings.NewReader(`{
-					  "symbol": "LTCBTC",
-					  "orderId": 1,
-					  "orderListId": -1,
-					  "clientOrderId": "myOrder1",
-					  "price": "0.25",
-					  "origQty": "1.25",
-					  "executedQty": "3.25",
-					  "cummulativeQuoteQty": "4.25",
-					  "status": "NEW",
-					  "timeInForce": "GTC",
-					  "type": "LIMIT",
-					  "side": "BUY",
-					  "stopPrice": "5.25",
-					  "icebergQty": "6.25",
-					  "time": 1499827319559,
-					  "updateTime": 1499827319560,
-					  "isWorking": true,
-					  "origQuoteOrderQty": "7.250000"
-					}`)),
+					Body: ioutil.NopCloser(strings.NewReader(`[
+					  {
+						"symbol": "LTCBTC",
+						"orderId": 1,
+						"orderListId": -1,
+						"clientOrderId": "myOrder1",
+						"price": "0.25",
+						"origQty": "1.25",
+						"executedQty": "2.25",
+						"cummulativeQuoteQty": "3.25",
+						"status": "NEW",
+						"timeInForce": "GTC",
+						"type": "LIMIT",
+						"side": "BUY",
+						"stopPrice": "4.25",
+						"icebergQty": "5.25",
+						"time": 1499827319559,
+						"updateTime": 1499827319560,
+						"isWorking": true,
+						"origQuoteOrderQty": "6.250000"
+					  }
+					]`)),
 				}, nil)
 			},
 			ctx:        context.Background(),
 			call:       call,
 			errorCheck: errNil,
-			expectedResult: gobinance.SpotOrder{
-				Symbol:                "LTCBTC",
-				OrderID:               1,
-				OrderListID:           -1,
-				ClientOrderID:         "myOrder1",
-				Price:                 big.NewFloat(0.25),
-				OriginalQty:           big.NewFloat(1.25),
-				ExecutedQty:           big.NewFloat(3.25),
-				CumulativeQuoteQty:    big.NewFloat(4.25),
-				Status:                gobinance.OrderStatusNew,
-				TimeInForce:           gobinance.TimeInForceGoodTilCanceled,
-				Type:                  gobinance.OrderTypeLimit,
-				Side:                  gobinance.OrderSideBuy,
-				StopPrice:             big.NewFloat(5.25),
-				IcebergQty:            big.NewFloat(6.25),
-				Time:                  time.Date(2017, 07, 12, 02, 41, 59, int(559*time.Millisecond), time.UTC),
-				UpdateTime:            time.Date(2017, 07, 12, 02, 41, 59, int(560*time.Millisecond), time.UTC),
-				IsWorking:             true,
-				OriginalQuoteOrderQty: big.NewFloat(7.25),
+			expectedResult: []gobinance.SpotOrder{
+				{
+					Symbol: "LTCBTC",
+					OrderID: 1,
+					OrderListID: -1,
+					ClientOrderID: "myOrder1",
+					Price: big.NewFloat(0.25),
+					OriginalQty: big.NewFloat(1.25),
+					ExecutedQty: big.NewFloat(2.25),
+					CumulativeQuoteQty: big.NewFloat(3.25),
+					Status: gobinance.OrderStatusNew,
+					TimeInForce: gobinance.TimeInForceGoodTilCanceled,
+					Type: gobinance.OrderTypeLimit,
+					Side: gobinance.OrderSideBuy,
+					StopPrice: big.NewFloat(4.25),
+					IcebergQty: big.NewFloat(5.25),
+					Time: time.Date(2017,07,12,02,41,59,int(559*time.Millisecond),time.UTC),
+					UpdateTime: time.Date(2017,07,12,02,41,59,int(560*time.Millisecond),time.UTC),
+					IsWorking: true,
+					OriginalQuoteOrderQty: big.NewFloat(6.25),
+				},
 			},
 		},
 	}
 }
-
-type queryOrderTestCase struct {
+type openOrdersTestCase struct {
 	name           string
 	setup          func(t *testing.T, mocks *clientMocks)
 	ctx            context.Context
-	options        []gobinance.QueryOrderOption
-	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.SpotOrder, error)
+	options        []gobinance.OpenOrderOptions
+	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrderOptions) ([]gobinance.SpotOrder, error)
 	errorCheck     errorCheck
-	expectedResult gobinance.SpotOrder
+	expectedResult []gobinance.SpotOrder
 }
 
-func runQueryOrderTestCases(t *testing.T, testCases ...queryOrderTestCase) {
+func runOpenOrdersTestCases(t *testing.T, testCases ...openOrdersTestCase) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
