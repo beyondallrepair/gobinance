@@ -63,13 +63,14 @@ func runSpotOrderTestCases(t *testing.T, testCases ...spotOrderTestCase) {
 	}
 }
 
-func commonSpotTestCases(expectedValues url.Values, call func(context.Context, *gobinance.Client, []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error)) []spotOrderTestCase {
+func commonSpotTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error)) []spotOrderTestCase {
 	return []spotOrderTestCase{
 		{
 			name: "request values",
 			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
+					expectedValues := expectedValues()
 					if req.Method != http.MethodPost {
 						t.Errorf("unexpected http method: expected %v but got %v", http.MethodPost, req.Method)
 					}
@@ -214,12 +215,14 @@ func TestClient_PlaceLimitMakerOrder(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderSide  = gobinance.OrderSideSell
 	)
-	common := commonSpotTestCases(map[string][]string{
-		"type":     {"LIMIT_MAKER"},
-		"symbol":   {testSymbol},
-		"side":     {string(orderSide)},
-		"quantity": {"1.25"},
-		"price":    {"2.25"},
+	common := commonSpotTestCases(func() url.Values {
+		return map[string][]string{
+			"type":     {"LIMIT_MAKER"},
+			"symbol":   {testSymbol},
+			"side":     {string(orderSide)},
+			"quantity": {"1.25"},
+			"price":    {"2.25"},
+		}
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
 		return client.PlaceLimitMakerOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), opts...)
@@ -233,13 +236,15 @@ func TestClient_PlaceLimitOrder(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderSide  = gobinance.OrderSideSell
 	)
-	common := commonSpotTestCases(map[string][]string{
-		"type":        {"LIMIT"},
-		"symbol":      {testSymbol},
-		"side":        {string(orderSide)},
-		"quantity":    {"1.25"},
-		"price":       {"2.25"},
-		"timeInForce": {"GTC"},
+	common := commonSpotTestCases(func() url.Values {
+		return map[string][]string{
+			"type":        {"LIMIT"},
+			"symbol":      {testSymbol},
+			"side":        {string(orderSide)},
+			"quantity":    {"1.25"},
+			"price":       {"2.25"},
+			"timeInForce": {"GTC"},
+		}
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
 		return client.PlaceLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), gobinance.TimeInForceGoodTilCanceled, opts...)
@@ -254,11 +259,13 @@ func TestClient_PlaceSpotMarketOrder(t *testing.T) {
 		orderSide  = gobinance.OrderSideSell
 	)
 	t.Run("QuantityAssetQuote", func(t *testing.T) {
-		common := commonSpotTestCases(map[string][]string{
-			"type":          {"MARKET"},
-			"symbol":        {testSymbol},
-			"side":          {string(orderSide)},
-			"quoteOrderQty": {"1.25"},
+		common := commonSpotTestCases(func() url.Values {
+			return map[string][]string{
+				"type":          {"MARKET"},
+				"symbol":        {testSymbol},
+				"side":          {string(orderSide)},
+				"quoteOrderQty": {"1.25"},
+			}
 		}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 			// input parameters dont matter here as they're not checked in the common tests
 			return client.PlaceSpotMarketOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), gobinance.QuantityAssetQuote, opts...)
@@ -266,11 +273,13 @@ func TestClient_PlaceSpotMarketOrder(t *testing.T) {
 		runSpotOrderTestCases(t, common...)
 	})
 	t.Run("QuantityAssetBase", func(t *testing.T) {
-		common := commonSpotTestCases(map[string][]string{
-			"type":     {"MARKET"},
-			"symbol":   {testSymbol},
-			"side":     {string(orderSide)},
-			"quantity": {"1.25"},
+		common := commonSpotTestCases(func() url.Values {
+			return map[string][]string{
+				"type":     {"MARKET"},
+				"symbol":   {testSymbol},
+				"side":     {string(orderSide)},
+				"quantity": {"1.25"},
+			}
 		}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 			// input parameters dont matter here as they're not checked in the common tests
 			return client.PlaceSpotMarketOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), gobinance.QuantityAssetBase, opts...)
@@ -285,14 +294,16 @@ func TestClient_PlaceStopLossLimitOrder(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderSide  = gobinance.OrderSideSell
 	)
-	common := commonSpotTestCases(map[string][]string{
-		"type":        {"STOP_LOSS_LIMIT"},
-		"symbol":      {testSymbol},
-		"side":        {string(orderSide)},
-		"quantity":    {"1.25"},
-		"stopPrice":   {"2.25"},
-		"price":       {"3.25"},
-		"timeInForce": {"GTC"},
+	common := commonSpotTestCases(func() url.Values {
+		return map[string][]string{
+			"type":        {"STOP_LOSS_LIMIT"},
+			"symbol":      {testSymbol},
+			"side":        {string(orderSide)},
+			"quantity":    {"1.25"},
+			"stopPrice":   {"2.25"},
+			"price":       {"3.25"},
+			"timeInForce": {"GTC"},
+		}
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
 		return client.PlaceStopLossLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), big.NewFloat(3.25), gobinance.TimeInForceGoodTilCanceled, opts...)
@@ -306,12 +317,14 @@ func TestClient_PlaceStopLossOrder(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderSide  = gobinance.OrderSideSell
 	)
-	common := commonSpotTestCases(map[string][]string{
-		"type":      {"STOP_LOSS"},
-		"symbol":    {testSymbol},
-		"side":      {string(orderSide)},
-		"quantity":  {"1.25"},
-		"stopPrice": {"2.25"},
+	common := commonSpotTestCases(func() url.Values {
+		return map[string][]string{
+			"type":      {"STOP_LOSS"},
+			"symbol":    {testSymbol},
+			"side":      {string(orderSide)},
+			"quantity":  {"1.25"},
+			"stopPrice": {"2.25"},
+		}
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
 		return client.PlaceStopLossOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), opts...)
@@ -325,14 +338,16 @@ func TestClient_PlaceTakeProfitLimitOrder(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderSide  = gobinance.OrderSideSell
 	)
-	common := commonSpotTestCases(map[string][]string{
-		"type":        {"TAKE_PROFIT_LIMIT"},
-		"symbol":      {testSymbol},
-		"side":        {string(orderSide)},
-		"quantity":    {"1.25"},
-		"stopPrice":   {"2.25"},
-		"price":       {"3.25"},
-		"timeInForce": {"GTC"},
+	common := commonSpotTestCases(func() url.Values {
+		return map[string][]string{
+			"type":        {"TAKE_PROFIT_LIMIT"},
+			"symbol":      {testSymbol},
+			"side":        {string(orderSide)},
+			"quantity":    {"1.25"},
+			"stopPrice":   {"2.25"},
+			"price":       {"3.25"},
+			"timeInForce": {"GTC"},
+		}
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
 		return client.PlaceTakeProfitLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), big.NewFloat(3.25), gobinance.TimeInForceGoodTilCanceled, opts...)
@@ -346,12 +361,14 @@ func TestClient_PlaceTakeProfitOrder(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderSide  = gobinance.OrderSideSell
 	)
-	common := commonSpotTestCases(map[string][]string{
-		"type":      {"TAKE_PROFIT"},
-		"symbol":    {testSymbol},
-		"side":      {string(orderSide)},
-		"quantity":  {"1.25"},
-		"stopPrice": {"2.25"},
+	common := commonSpotTestCases(func() url.Values {
+		return map[string][]string{
+			"type":      {"TAKE_PROFIT"},
+			"symbol":    {testSymbol},
+			"side":      {string(orderSide)},
+			"quantity":  {"1.25"},
+			"stopPrice": {"2.25"},
+		}
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
 		return client.PlaceTakeProfitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), opts...)
