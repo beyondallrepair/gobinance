@@ -22,7 +22,7 @@ func TestClient_QueryOrderByClientID(t *testing.T) {
 		testSymbol        = "testSymbol"
 		testClientOrderID = "someClientID"
 	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.QueryOrderResult, error) {
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.SpotOrder, error) {
 		return uut.QueryOrderByClientID(ctx, testSymbol, testClientOrderID, options...)
 	}
 
@@ -41,7 +41,7 @@ func TestClient_QueryOrderByID(t *testing.T) {
 		testSymbol = "testSymbol"
 		orderID    = 1234
 	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.QueryOrderResult, error) {
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.SpotOrder, error) {
 		return uut.QueryOrderByID(ctx, testSymbol, orderID, options...)
 	}
 
@@ -54,7 +54,7 @@ func TestClient_QueryOrderByID(t *testing.T) {
 	runQueryOrderTestCases(t, cases...)
 }
 
-func commonSpotQueryTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.QueryOrderOption) (gobinance.QueryOrderResult, error)) []queryOrderTestCase {
+func commonSpotQueryTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.QueryOrderOption) (gobinance.SpotOrder, error)) []queryOrderTestCase {
 	// note that some tests modify the expected url.Values in place.  Therefore, to avoid
 	// races, the expectedValues function should return a newly constructed url.Values map
 	// with the expected values in it.
@@ -123,6 +123,24 @@ func commonSpotQueryTestCases(expectedValues func() url.Values, call func(contex
 			errorCheck: errNotNil,
 		},
 		{
+			name: "QueryOrderRecvWindow",
+			setup: func(t *testing.T, mocks *clientMocks) {
+				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
+				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
+					expected := fmt.Sprint((testRecvWindow + time.Second).Milliseconds())
+					if got := req.URL.Query().Get("recvWindow"); got != expected {
+						t.Errorf("unexpected value for recvWindow. expected %v but got %v", expected, got)
+					}
+				}).Return(nil, fmt.Errorf("stop early"))
+			},
+			options: []gobinance.QueryOrderOption{
+				gobinance.QueryOrderRecvWindow(testRecvWindow + time.Second),
+			},
+			ctx:        context.Background(),
+			call:       call,
+			errorCheck: errNotNil,
+		},
+		{
 			name: "success",
 			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
@@ -155,7 +173,7 @@ func commonSpotQueryTestCases(expectedValues func() url.Values, call func(contex
 			ctx:        context.Background(),
 			call:       call,
 			errorCheck: errNil,
-			expectedResult: gobinance.QueryOrderResult{
+			expectedResult: gobinance.SpotOrder{
 				Symbol:                "LTCBTC",
 				OrderID:               1,
 				OrderListID:           -1,
@@ -184,9 +202,9 @@ type queryOrderTestCase struct {
 	setup          func(t *testing.T, mocks *clientMocks)
 	ctx            context.Context
 	options        []gobinance.QueryOrderOption
-	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.QueryOrderResult, error)
+	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.QueryOrderOption) (gobinance.SpotOrder, error)
 	errorCheck     errorCheck
-	expectedResult gobinance.QueryOrderResult
+	expectedResult gobinance.SpotOrder
 }
 
 func runQueryOrderTestCases(t *testing.T, testCases ...queryOrderTestCase) {

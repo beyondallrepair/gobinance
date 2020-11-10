@@ -16,69 +16,46 @@ import (
 	"time"
 )
 
-func TestClient_CancelOrderByClientOrderID(t *testing.T) {
-	t.Parallel()
-	const (
-		testSymbol        = "testSymbol"
-		testClientOrderID = "someClientID"
-	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.CancelSpotOrderOption) (gobinance.CancelSpotOrderResult, error) {
-		return uut.CancelOrderByClientOrderID(ctx, testSymbol, testClientOrderID, options...)
+func TestClient_AllOpenSpotOrders(t *testing.T) {
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error) {
+		return uut.AllOpenSpotOrders(ctx, options...)
 	}
+	cases := commonOpenOrdersTestCases(func() url.Values {
+		return url.Values{}
+	}, call)
+	runOpenOrdersTestCases(t, cases...)
+}
 
-	cases := commonSpotCancelTestCases(func() url.Values {
+func TestClient_OpenSpotOrdersForSymbol(t *testing.T) {
+	const (
+		testSymbol = "testSymbol"
+	)
+	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error) {
+		return uut.OpenSpotOrdersForSymbol(ctx, testSymbol, options...)
+	}
+	cases := commonOpenOrdersTestCases(func() url.Values {
 		return map[string][]string{
-			"symbol":            {testSymbol},
-			"origClientOrderId": {testClientOrderID},
+			"symbol": {testSymbol},
 		}
 	}, call)
-	runCancelOrderTestCases(t, cases...)
+	runOpenOrdersTestCases(t, cases...)
 }
 
-func TestClient_CancelOrderByOrderID(t *testing.T) {
-	t.Parallel()
-	const (
-		testSymbol  = "testSymbol"
-		testOrderID = 12345
-	)
-	call := func(ctx context.Context, uut *gobinance.Client, options []gobinance.CancelSpotOrderOption) (gobinance.CancelSpotOrderResult, error) {
-		return uut.CancelOrderByOrderID(ctx, testSymbol, testOrderID, options...)
-	}
-
-	cases := commonSpotCancelTestCases(func() url.Values {
-		return map[string][]string{
-			"symbol":  {testSymbol},
-			"orderId": {fmt.Sprint(testOrderID)},
-		}
-	}, call)
-	runCancelOrderTestCases(t, cases...)
-}
-
-type cancelOrderTestCase struct {
-	name           string
-	setup          func(t *testing.T, mocks *clientMocks)
-	ctx            context.Context
-	options        []gobinance.CancelSpotOrderOption
-	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.CancelSpotOrderOption) (gobinance.CancelSpotOrderResult, error)
-	errorCheck     errorCheck
-	expectedResult gobinance.CancelSpotOrderResult
-}
-
-func commonSpotCancelTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.CancelSpotOrderOption) (gobinance.CancelSpotOrderResult, error)) []cancelOrderTestCase {
+func commonOpenOrdersTestCases(expectedValues func() url.Values, call func(context.Context, *gobinance.Client, []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error)) []openOrdersTestCase {
 	// note that some tests modify the expected url.Values in place.  Therefore, to avoid
 	// races, the expectedValues function should return a newly constructed url.Values map
 	// with the expected values in it.
-	return []cancelOrderTestCase{
+	return []openOrdersTestCase{
 		{
 			name: "request values",
 			setup: func(t *testing.T, mocks *clientMocks) {
 				expectedValues := expectedValues()
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
-					if req.Method != http.MethodDelete {
-						t.Errorf("unexpected http method: expected %v but got %v", http.MethodDelete, req.Method)
+					if req.Method != http.MethodGet {
+						t.Errorf("unexpected http method: expected %v but got %v", http.MethodGet, req.Method)
 					}
-					if req.URL.Path != "/api/v3/order" {
+					if req.URL.Path != "/api/v3/openOrders" {
 						t.Errorf("unexpected path: expected %v but got %v", "/api/v3/order", req.URL.Path)
 					}
 					if hdr := req.Header.Get("X-MBX-APIKEY"); hdr != testBinanceApiKey {
@@ -133,34 +110,7 @@ func commonSpotCancelTestCases(expectedValues func() url.Values, call func(conte
 			errorCheck: errNotNil,
 		},
 		{
-			name: "cancelSpotClientOrderID",
-			setup: func(t *testing.T, mocks *clientMocks) {
-				expectedValues := expectedValues()
-				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
-				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
-					if val := req.URL.Query().Get("newClientOrderId"); val != "testOrderID" {
-						t.Errorf("unexpected newClientOrderId. expected %v but got %v", "testOrderID", val)
-					}
-					// confirm we've not accidentally clobbered any of the other IDs
-					expectedOrigClientOrderId := expectedValues.Get("origClientOrderId")
-					if got := req.URL.Query().Get("origClientOrderId"); got != expectedOrigClientOrderId {
-						t.Errorf("unexpected origClientOrderId. expected %v but got %v", expectedOrigClientOrderId, got)
-					}
-					expectedOrderId := expectedValues.Get("orderId")
-					if got := req.URL.Query().Get("orderId"); got != expectedOrderId {
-						t.Errorf("unexpected orderId. expected %v but got %v", expectedOrderId, got)
-					}
-				}).Return(nil, fmt.Errorf("stop early"))
-			},
-			options: []gobinance.CancelSpotOrderOption{
-				gobinance.CancelSpotClientOrderID("testOrderID"),
-			},
-			ctx:        context.Background(),
-			call:       call,
-			errorCheck: errNotNil,
-		},
-		{
-			name: "CancelSpotOrderRecvWindow",
+			name: "OpenOrdersReceiveWindow",
 			setup: func(t *testing.T, mocks *clientMocks) {
 				mocks.MockSigner.EXPECT().Sign(gomock.Any()).Return(mockSignature)
 				mocks.MockDoer.EXPECT().Do(gomock.Any()).Do(func(req *http.Request) {
@@ -170,8 +120,8 @@ func commonSpotCancelTestCases(expectedValues func() url.Values, call func(conte
 					}
 				}).Return(nil, fmt.Errorf("stop early"))
 			},
-			options: []gobinance.CancelSpotOrderOption{
-				gobinance.CancelSpotOrderRecvWindow(testRecvWindow + time.Second),
+			options: []gobinance.OpenOrdersOptions{
+				gobinance.OpenOrdersRecvWindow(testRecvWindow + time.Second),
 			},
 			ctx:        context.Background(),
 			call:       call,
@@ -185,46 +135,70 @@ func commonSpotCancelTestCases(expectedValues func() url.Values, call func(conte
 					StatusCode: 200,
 					// from the binance documentation, but with values modified to
 					// confirm fields are being correctly assigned
-					Body: ioutil.NopCloser(strings.NewReader(`{
-					  "symbol": "LTCBTC",
-					  "origClientOrderId": "myOrder1",
-					  "orderId": 4,
-					  "orderListId": -1,
-					  "clientOrderId": "cancelMyOrder1",
-					  "price": "2.25000000",
-					  "origQty": "1.25000000",
-					  "executedQty": "3.25000000",
-					  "cummulativeQuoteQty": "4.25000000",
-					  "status": "CANCELED",
-					  "timeInForce": "GTC",
-					  "type": "LIMIT",
-					  "side": "BUY"
-					}`)),
+					Body: ioutil.NopCloser(strings.NewReader(`[
+					  {
+						"symbol": "LTCBTC",
+						"orderId": 1,
+						"orderListId": -1,
+						"clientOrderId": "myOrder1",
+						"price": "0.25",
+						"origQty": "1.25",
+						"executedQty": "2.25",
+						"cummulativeQuoteQty": "3.25",
+						"status": "NEW",
+						"timeInForce": "GTC",
+						"type": "LIMIT",
+						"side": "BUY",
+						"stopPrice": "4.25",
+						"icebergQty": "5.25",
+						"time": 1499827319559,
+						"updateTime": 1499827319560,
+						"isWorking": true,
+						"origQuoteOrderQty": "6.250000"
+					  }
+					]`)),
 				}, nil)
 			},
 			ctx:        context.Background(),
 			call:       call,
 			errorCheck: errNil,
-			expectedResult: gobinance.CancelSpotOrderResult{
-				Symbol:                "LTCBTC",
-				OrderID:               4,
-				OrderListID:           -1,
-				ClientOrderID:         "cancelMyOrder1",
-				OriginalClientOrderID: "myOrder1",
-				Price:                 big.NewFloat(2.25),
-				OriginalQty:           big.NewFloat(1.25),
-				ExecutedQty:           big.NewFloat(3.25),
-				CumulativeQuoteQty:    big.NewFloat(4.25),
-				Status:                gobinance.OrderStatusCanceled,
-				TimeInForce:           gobinance.TimeInForceGoodTilCanceled,
-				Type:                  gobinance.OrderTypeLimit,
-				Side:                  gobinance.OrderSideBuy,
+			expectedResult: []gobinance.SpotOrder{
+				{
+					Symbol:                "LTCBTC",
+					OrderID:               1,
+					OrderListID:           -1,
+					ClientOrderID:         "myOrder1",
+					Price:                 big.NewFloat(0.25),
+					OriginalQty:           big.NewFloat(1.25),
+					ExecutedQty:           big.NewFloat(2.25),
+					CumulativeQuoteQty:    big.NewFloat(3.25),
+					Status:                gobinance.OrderStatusNew,
+					TimeInForce:           gobinance.TimeInForceGoodTilCanceled,
+					Type:                  gobinance.OrderTypeLimit,
+					Side:                  gobinance.OrderSideBuy,
+					StopPrice:             big.NewFloat(4.25),
+					IcebergQty:            big.NewFloat(5.25),
+					Time:                  time.Date(2017, 07, 12, 02, 41, 59, int(559*time.Millisecond), time.UTC),
+					UpdateTime:            time.Date(2017, 07, 12, 02, 41, 59, int(560*time.Millisecond), time.UTC),
+					IsWorking:             true,
+					OriginalQuoteOrderQty: big.NewFloat(6.25),
+				},
 			},
 		},
 	}
 }
 
-func runCancelOrderTestCases(t *testing.T, testCases ...cancelOrderTestCase) {
+type openOrdersTestCase struct {
+	name           string
+	setup          func(t *testing.T, mocks *clientMocks)
+	ctx            context.Context
+	options        []gobinance.OpenOrdersOptions
+	call           func(ctx context.Context, uut *gobinance.Client, options []gobinance.OpenOrdersOptions) ([]gobinance.SpotOrder, error)
+	errorCheck     errorCheck
+	expectedResult []gobinance.SpotOrder
+}
+
+func runOpenOrdersTestCases(t *testing.T, testCases ...openOrdersTestCase) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {

@@ -21,6 +21,7 @@ type spotOrderInput struct {
 	StopPrice        *big.Float        `param:"stopPrice,omitempty"`
 	IcebergQty       int               `param:"icebergQty,omitempty"`
 	NewOrderRespType OrderResponseType `param:"newOrderRespType,omitempty"`
+	RecvWindow       int64             `param:"recvWindow,omitempty"`
 }
 
 type Fill struct {
@@ -94,6 +95,13 @@ type SpotOrderOption func(s *spotOrderInput)
 func SpotClientOrderID(id string) SpotOrderOption {
 	return func(s *spotOrderInput) {
 		s.NewClientOrderID = id
+	}
+}
+
+// SpotOrderRecvWindow overrides the default receive window for a request to place a spot order
+func SpotOrderRecvWindow(d time.Duration) SpotOrderOption {
+	return func(s *spotOrderInput) {
+		s.RecvWindow = d.Milliseconds()
 	}
 }
 

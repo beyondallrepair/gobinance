@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"time"
 )
 
 // CancelSpotOrderResult holds the data returned by binance in response to a request to cancel an order
@@ -38,11 +39,19 @@ func CancelSpotClientOrderID(id string) CancelSpotOrderOption {
 	}
 }
 
+// CancelSpotOrderRecvWindow overrides the recvWindow for a cancel spot order request
+func CancelSpotOrderRecvWindow(d time.Duration) CancelSpotOrderOption {
+	return func(s *cancelSpotOrderInput) {
+		s.RecvWindow = d.Milliseconds()
+	}
+}
+
 type cancelSpotOrderInput struct {
 	Symbol            string `param:"symbol,omitempty"`
 	OrderID           int64  `param:"orderId,omitempty"`
 	OrigClientOrderID string `param:"origClientOrderId,omitempty"`
 	NewClientOrderID  string `param:"newClientOrderId,omitempty"`
+	RecvWindow        int64  `param:"recvWindow,omitempty"`
 }
 
 func applyCancelSpotOrderOptions(in *cancelSpotOrderInput, opts ...CancelSpotOrderOption) {
