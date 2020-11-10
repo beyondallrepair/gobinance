@@ -192,7 +192,7 @@ func commonSpotTestCases(expectedValues url.Values, call func(context.Context, *
 				ExecutedQty:        big.NewFloat(3.25),
 				CumulativeQuoteQty: big.NewFloat(4.25),
 				Status:             gobinance.OrderStatusFilled,
-				TimeInForce:        gobinance.TimeInForceGoodTilCancelled,
+				TimeInForce:        gobinance.TimeInForceGoodTilCanceled,
 				Type:               gobinance.OrderTypeMarket, // although this varies per order type, our mock result is always MARKET here
 				Side:               gobinance.OrderSideSell,   // Mocked result is SELL
 				Fills: []gobinance.Fill{
@@ -242,7 +242,7 @@ func TestClient_PlaceLimitOrder(t *testing.T) {
 		"timeInForce": {"GTC"},
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
-		return client.PlaceLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), gobinance.TimeInForceGoodTilCancelled, opts...)
+		return client.PlaceLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), gobinance.TimeInForceGoodTilCanceled, opts...)
 	})
 	runSpotOrderTestCases(t, common...)
 }
@@ -295,7 +295,7 @@ func TestClient_PlaceStopLossLimitOrder(t *testing.T) {
 		"timeInForce": {"GTC"},
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
-		return client.PlaceStopLossLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), big.NewFloat(3.25), gobinance.TimeInForceGoodTilCancelled, opts...)
+		return client.PlaceStopLossLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), big.NewFloat(3.25), gobinance.TimeInForceGoodTilCanceled, opts...)
 	})
 	runSpotOrderTestCases(t, common...)
 }
@@ -335,7 +335,7 @@ func TestClient_PlaceTakeProfitLimitOrder(t *testing.T) {
 		"timeInForce": {"GTC"},
 	}, func(ctx context.Context, client *gobinance.Client, opts []gobinance.SpotOrderOption) (gobinance.SpotOrderResult, error) {
 		// input parameters dont matter here as they're not checked in the common tests
-		return client.PlaceTakeProfitLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), big.NewFloat(3.25), gobinance.TimeInForceGoodTilCancelled, opts...)
+		return client.PlaceTakeProfitLimitOrder(ctx, testSymbol, gobinance.OrderSideSell, big.NewFloat(1.25), big.NewFloat(2.25), big.NewFloat(3.25), gobinance.TimeInForceGoodTilCanceled, opts...)
 	})
 	runSpotOrderTestCases(t, common...)
 }

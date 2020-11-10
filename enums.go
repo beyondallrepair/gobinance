@@ -12,8 +12,8 @@ const (
 	OrderStatusPartiallyFilled OrderStatus = "PARTIALLY_FILLED"
 	// OrderStatusFilled indicates the order has been completed.
 	OrderStatusFilled OrderStatus = "FILLED"
-	// OrderStatusCancelled indicates the order has been canceled by the user.
-	OrderStatusCancelled OrderStatus = "CANCELLED"
+	// OrderStatusCanceled indicates the order has been canceled by the user.
+	OrderStatusCanceled OrderStatus = "CANCELED"
 	// OrderStatusRejected indicates the order was not accepted by the engine and not processed.
 	OrderStatusRejected OrderStatus = "REJECTED"
 	// OrderStatusExpired indicates the order was canceled according to the order type's rules (e.g. LIMIT FOK orders with no
@@ -28,7 +28,7 @@ func (s OrderStatus) Validate() error {
 	case OrderStatusNew:
 	case OrderStatusPartiallyFilled:
 	case OrderStatusFilled:
-	case OrderStatusCancelled:
+	case OrderStatusCanceled:
 	case OrderStatusRejected:
 	case OrderStatusExpired:
 	default:
@@ -119,8 +119,8 @@ func (e OrderSide) Validate() error {
 type TimeInForce string
 
 const (
-	// TimeInForceGoodTilCancelled indicates an order will be on the book unless the order is canceled
-	TimeInForceGoodTilCancelled TimeInForce = "GTC"
+	// TimeInForceGoodTilCanceled indicates an order will be on the book unless the order is canceled
+	TimeInForceGoodTilCanceled TimeInForce = "GTC"
 	// TimeInForceImmediateOrCancel indicates an order will try to fill the order as much as it can before the order expires
 	TimeInForceImmediateOrCancel TimeInForce = "IOC"
 	// TimeInForceFillOrKill indicates an order will expire if the full order cannot be filled upon execution
@@ -130,7 +130,7 @@ const (
 // Validate returns nil if the value is a valid TimeInForce, or an error if not.
 func (e TimeInForce) Validate() error {
 	switch e {
-	case TimeInForceGoodTilCancelled:
+	case TimeInForceGoodTilCanceled:
 	case TimeInForceImmediateOrCancel:
 	case TimeInForceFillOrKill:
 	default:

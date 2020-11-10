@@ -44,7 +44,7 @@ func TestOrderStatus_Validate(t *testing.T) {
 		OrderStatusNew,
 		OrderStatusPartiallyFilled,
 		OrderStatusFilled,
-		OrderStatusCancelled,
+		OrderStatusCanceled,
 		OrderStatusRejected,
 		OrderStatusExpired,
 	)
@@ -83,7 +83,7 @@ func TestOrderSide_Validate(t *testing.T) {
 func TestTimeInForce_Validate(t *testing.T) {
 	testValidatableEnum(t,
 		TimeInForce("invalid"),
-		TimeInForceGoodTilCancelled,
+		TimeInForceGoodTilCanceled,
 		TimeInForceImmediateOrCancel,
 		TimeInForceFillOrKill,
 	)
